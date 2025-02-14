@@ -1,0 +1,21 @@
+slides:
+  - page: 1
+    text: "你好"
+  - page: 2
+    text: "再见"
+
+audio_dir: audio  # 预录制音频文件所在目录
+
+# 视频设置
+video:
+  resolution: (1280, 720)
+  fps: 24
+  output: output.mp4
+  silent_padding: 0.5
+voice:
+  engine: xunfei
+
+xunfei:
+  appid:
+  apisec:
+  apikey:
