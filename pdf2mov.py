@@ -17,7 +17,7 @@ temp_videos = []
 for slide in config['slides']:
     page = slide['page']
     text = slide['text']
-    audio_file = os.path.join(config['audio_dir'], f"{page}.wav")
+    audio_file = os.path.join(config['audio_dir'], f"{page}.{config['voice']['format']}")
 
     # 使用 convert 命令将 PDF 页面转换为图像
     image_file = os.path.join('temp_images', f'{page}.png')
@@ -31,8 +31,11 @@ for slide in config['slides']:
     audio_clip = mp.AudioFileClip(audio_file)
     audio_len = audio_clip.duration
 
+    clip_img = mp.ImageClip(image).set_duration(config['video']['silent_padding'])
+    temp_videos.append(clip_img)
+
     # 将图像和音频合并为视频文件
-    clip_img = mp.ImageClip(image).set_duration(audio_len + config['video']['silent_padding'] * 2)
+    clip_img = mp.ImageClip(image).set_duration(audio_len)
     clip = clip_img.set_audio(audio_clip)
 
     # 添加字幕
@@ -42,6 +45,9 @@ for slide in config['slides']:
 
     # 添加到临时视频列表
     temp_videos.append(clip)
+
+    clip_img = mp.ImageClip(image).set_duration(config['video']['silent_padding'])
+    temp_videos.append(clip_img)
 
 # 串联所有临时视频文件
 final_clip = mp.concatenate_videoclips(temp_videos)

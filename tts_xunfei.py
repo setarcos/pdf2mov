@@ -55,7 +55,7 @@ class WebSocketClient:
         """Create JSON payload with text encoding."""
         return json.dumps({
             "common": {"app_id": self.wsParam.APPID},
-            "business": {"aue": "raw", "auf": "audio/L16;rate=16000", "vcn": "x4_lingfeizhe_zl", "tte": "utf8", "speed": 65},
+            "business": {"aue": "raw", "auf": "audio/L16;rate=16000", "vcn": "x4_lingfeizhe_zl", "tte": "utf8", "speed": 60},
             "data": {"status": 2, "text": str(base64.b64encode(text.encode('utf-8')), "utf-8")}
         })
 
