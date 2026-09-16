@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 import cv2
-import moviepy.editor as mp
+import moviepy as mp
 
 from common import DEFAULT_CONFIG, load_config, load_slides
 
@@ -120,18 +120,18 @@ def main():
         audio_clip = mp.AudioFileClip(audio_file)
         audio_len = audio_clip.duration
 
-        temp_videos.append(mp.ImageClip(image).set_duration(opts["silent_padding"]))
+        temp_videos.append(mp.ImageClip(image).with_duration(opts["silent_padding"]))
 
         # 将图像和音频合并为视频文件
-        clip = mp.ImageClip(image).set_duration(audio_len).set_audio(audio_clip)
+        clip = mp.ImageClip(image).with_duration(audio_len).with_audio(audio_clip)
 
         # 添加字幕
-        #txt_clip = mp.TextClip(text, fontsize=24, color='white', bg_color='black')
-        #txt_clip = txt_clip.set_position(('center', 0.8)).set_duration(audio_len)
+        #txt_clip = mp.TextClip(text=text, font_size=24, color='white', bg_color='black')
+        #txt_clip = txt_clip.with_position(('center', 0.8)).with_duration(audio_len)
         #clip = mp.CompositeVideoClip([clip, txt_clip])
 
         temp_videos.append(clip)
-        temp_videos.append(mp.ImageClip(image).set_duration(opts["silent_padding"]))
+        temp_videos.append(mp.ImageClip(image).with_duration(opts["silent_padding"]))
 
     # 串联所有临时视频文件
     final_clip = mp.concatenate_videoclips(temp_videos)
