@@ -10,10 +10,10 @@
 
  1. 将 PDF 文件放到当前目录
  1. 编辑讲稿文件 `trans.yaml`，逐页填写该页的朗读文本
- 3. 修改 `config.yaml`，设置 `trans`（讲稿文件）、`audio_dir`（音频目录）、`pdf`（PDF 文件）及视频参数
- 1. 设置讯飞 APPID 等信息（或改用本地 Qwen 引擎, 见下）
- 1. 执行 `tts_xunfei.py` 生成讲稿音频（或 `tts_qwen.py` 本地 Qwen3-TTS）
- 1. 执行 `pdf2mov.py` 将 PDF 页面和音频整合为视频
+ 1. 修改 `config.yaml`，设置 `trans`（讲稿文件）、`audio_dir`（音频目录）、`pdf`（PDF 文件）及视频参数
+ 1. 在 `config.yaml` 中设置 `voice.engine` 及对应引擎的参数（讯飞 APPID / 本地 Qwen 模型路径等, 见下）
+ 1. 执行 `pdf2mov.py` 将 PDF 页面和音频整合为视频；缺少音频的页会自动调用 `voice.engine`
+    指定的引擎补生成（也可先手动执行 `tts_xunfei.py` / `tts_qwen.py` / `tts_aliyun.py`）
 
 ## 讲稿文件 (`trans`)
 
@@ -45,6 +45,31 @@ voice:
   format: wav       # 音频扩展名，需与 TTS 输出一致
 ```
 
+## 音频缺失时自动配音
+
+`pdf2mov.py` 启动时逐页检查 `audio_dir/{page}.{format}`，一旦有缺失，就调用 `voice.engine`
+对应的配音脚本，只补生成缺失的页（已有音频不会重新生成）：
+
+| voice.engine | 脚本 | 输出格式 |
+| --- | --- | --- |
+| `qwen` | `tts_qwen.py` | 由 `voice.format` 决定（默认 wav） |
+| `xunfei` | `tts_xunfei.py` | 固定 wav |
+| `aliyun` | `tts_aliyun.py` | 固定 mp3（`voice.format` 需设为 mp3） |
+
+`pdf2mov.py` 会把 `--config`、`--trans`、`--audio-dir`、`--format`、`--pages`（缺失页）
+转发给配音脚本，等价于：
+
+```bash
+python tts_qwen.py --config config.yaml --trans trans/trans.yaml \
+    --audio-dir audio --format wav --pages 1,3-5
+```
+
+即使 `config.yaml` 里没有 `trans:` 键、讲稿只在命令行用 `pdf2mov.py --trans` 给出，
+转发的也是已解析的讲稿路径，引擎不会再报“配置缺少讲稿”。
+
+引擎执行失败、或未输出对应文件时，`pdf2mov.py` 会报错退出并提示缺失页，此时可先手动
+运行上面的脚本排查。`voice.format` 必须与引擎输出一致，否则会提示“未生成第 N 页音频”。
+
 ## pdf2mov.py 命令行
 
 所有参数都可在命令行指定，不依赖 `config.yaml` 也能一次完成转换：
@@ -59,7 +84,7 @@ python pdf2mov.py -o output.mp4
 
 常用参数：`--pdf`（PDF 文件）、`--audio-dir`（音频输入目录，默认取 `audio_dir`）、
 `-o/--output`（输出视频文件名）、`--trans`（讲稿文件）、`--fps`、`--silent-padding`、
-`--format`（音频扩展名）、`--density`（PDF 转图像 DPI，默认 300）。
+`--format`（音频扩展名，同时作为自动配音的输出格式）、`--density`（PDF 转图像 DPI，默认 300）。
 未提供讲稿时，会按音频目录中的数字文件名自动推断页码顺序。
 
 ## 本地 Qwen 配音 (tts_qwen.py)

@@ -51,6 +51,8 @@ import re
 import sys
 import time
 
+from common import parse_pages
+
 
 # 模型路径 按以下顺序解析:
 #   命令行 --model > config 的 qwen: 段 > 环境变量 > 报错提示
@@ -108,23 +110,6 @@ def split_long_text(text, max_chars):
     if buf.strip():
         segs.append(buf)
     return [s.strip() for s in segs if s.strip()]
-
-
-def parse_pages(spec):
-    """解析 --pages '1,3,5-9' 为页码列表; None 表示全部"""
-    if spec is None:
-        return None
-    pages = set()
-    for part in str(spec).split(","):
-        part = part.strip()
-        if not part:
-            continue
-        if "-" in part:
-            a, b = part.split("-", 1)
-            pages.update(range(int(a), int(b) + 1))
-        else:
-            pages.add(int(part))
-    return pages
 
 
 # ---------------------------------------------------------------- 模型加载
@@ -338,6 +323,8 @@ def main():
         description="PDF2MOV 讲稿配音: 本地 Qwen3-TTS 逐页合成 config 中 slides 的音频 "
                     "(默认 CustomVoice 内置音色; 传 --ref-wav 自动切换语音克隆)")
     parser.add_argument("--config", default="config.yaml", help="配置文件路径 (默认 config.yaml)")
+    parser.add_argument("--trans", default=None,
+                        help="讲稿 YAML 文件 (覆盖 config 的 trans, 相对路径按 config 所在目录解析)")
     parser.add_argument("--pages", default=None,
                         help="只合成指定页, 如 '1,3,5-9' (默认全部)")
     parser.add_argument("--audio-dir", default=None,
@@ -374,7 +361,7 @@ def main():
 
     try:
         from common import load_config
-        config = load_config(args.config)
+        config = load_config(args.config, trans=args.trans)
     except Exception as e:
         log(f"错误: 读取配置失败 - {e}")
         sys.exit(1)

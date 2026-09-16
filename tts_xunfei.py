@@ -1,7 +1,9 @@
 import os
 import ssl
+import sys
 import json
 import base64
+import argparse
 import wave
 import websocket
 from datetime import datetime
@@ -11,7 +13,7 @@ import hmac
 from wsgiref.handlers import format_date_time
 from urllib.parse import urlencode
 
-from common import load_config
+from common import load_config, parse_pages
 
 
 class Ws_Param:
@@ -124,14 +126,38 @@ class WebSocketClient:
         ws.on_open = on_open
         ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})  # Blocking call
 
-    def run(self):
-        """Process each slide sequentially, reconnecting for each message."""
+    def run(self, pages=None):
+        """逐页处理 (pages 为 None 时处理全部), 每页重新建立连接"""
         for slide in self.slides:
+            if pages is not None and int(slide['page']) not in pages:
+                continue
             self.process_slide(slide)
 
 
-if __name__ == "__main__":
-    config = load_config()
+def main():
+    parser = argparse.ArgumentParser(
+        description="PDF2MOV 讲稿配音: 讯飞在线 TTS 逐页合成 config 中 slides 的音频 (输出 wav)")
+    parser.add_argument("--config", default="config.yaml", help="配置文件路径 (默认 config.yaml)")
+    parser.add_argument("--trans", default=None,
+                        help="讲稿 YAML 文件 (覆盖 config 的 trans, 相对路径按 config 所在目录解析)")
+    parser.add_argument("--pages", default=None,
+                        help="只合成指定页, 如 '1,3,5-9' (默认全部)")
+    parser.add_argument("--audio-dir", default=None,
+                        help="音频输出目录 (默认取 config 的 audio_dir)")
+    parser.add_argument("--format", default=None, help="输出扩展名 (仅支持 wav)")
+    args = parser.parse_args()
+
+    if args.format and args.format.lstrip(".").lower() != "wav":
+        print(f"错误: 讯飞引擎输出格式固定为 wav, 不支持 '{args.format}'")
+        sys.exit(1)
+
+    config = load_config(args.config, trans=args.trans)
+    if args.audio_dir:
+        config['audio_dir'] = args.audio_dir
 
     client = WebSocketClient(config)
-    client.run()  # Runs WebSocket sequentially for each slide
+    client.run(parse_pages(args.pages))
+
+
+if __name__ == "__main__":
+    main()

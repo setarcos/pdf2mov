@@ -15,10 +15,11 @@ import yaml
 DEFAULT_CONFIG = "config.yaml"
 
 
-def load_config(path=DEFAULT_CONFIG, data=None):
+def load_config(path=DEFAULT_CONFIG, data=None, trans=None):
     """读取配置并合并 trans 讲稿, 返回 dict。
 
     - data 非 None 时直接使用该 dict (不再读取 path), 但 trans 仍按 path 所在目录解析
+    - trans 参数非 None 时覆盖配置中的讲稿路径 (优先于 data 里已有的 slides)
     - trans 指向的讲稿 YAML 合并为 data['slides']
     - audio_dir 为音频目录, 缺省为 audio
     """
@@ -30,9 +31,14 @@ def load_config(path=DEFAULT_CONFIG, data=None):
         else:
             data = {}
 
-    trans = data.get("trans")
-    if trans and "slides" not in data:
-        trans_path = trans if os.path.isabs(trans) else os.path.join(base_dir, trans)
+    if trans:
+        data["trans"] = trans
+        data.pop("slides", None)
+
+    trans_path = data.get("trans")
+    if trans_path and "slides" not in data:
+        if not os.path.isabs(trans_path):
+            trans_path = os.path.join(base_dir, trans_path)
         with open(trans_path, "r", encoding="utf-8") as f:
             slides = yaml.safe_load(f) or {}
         if isinstance(slides, dict):
@@ -49,3 +55,20 @@ def load_slides(config):
     """返回按页码排序的讲稿列表, 无讲稿时返回 []"""
     slides = config.get("slides") or []
     return sorted(slides, key=lambda s: int(s.get("page", 0)))
+
+
+def parse_pages(spec):
+    """解析 --pages '1,3,5-9' 形式的页码, 返回 set; None / 空串 表示全部 (返回 None)"""
+    if spec is None or str(spec).strip() == "":
+        return None
+    pages = set()
+    for part in str(spec).split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            a, b = part.split("-", 1)
+            pages.update(range(int(a), int(b) + 1))
+        else:
+            pages.add(int(part))
+    return pages

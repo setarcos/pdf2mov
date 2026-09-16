@@ -19,6 +19,11 @@ voice:
   engine: xunfei
   format: wav
 
+# engine: qwen 时, 模型路径等参数写在这里 (见 README)
+qwen:
+  model_custom:
+  model_base:
+
 xunfei:
   appid:
   apisec:

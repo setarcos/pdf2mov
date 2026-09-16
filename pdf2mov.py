@@ -3,6 +3,8 @@
 """PDF2MOV: 将 PDF 每页与对应音频合成为视频。
 
 讲稿内容保存在 config.yaml 中 trans 指向的讲稿 YAML 文件里, 可用 --trans 覆盖。
+若某页音频不存在, 会自动调用 config 中 voice.engine 指定的引擎 (tts_qwen.py /
+tts_xunfei.py / tts_aliyun.py) 只补生成缺失页的音频。
 所有参数都能在命令行给出, 不依赖 config.yaml 也能一次完成转换:
 
     python pdf2mov.py --pdf input.pdf --trans trans.yaml --audio-dir audio -o output.mp4
@@ -23,6 +25,13 @@ from common import DEFAULT_CONFIG, load_config, load_slides
 
 TEMP_DIR = "temp_images"
 
+# voice.engine -> 配音脚本 (缺音频时自动调用)
+TTS_SCRIPTS = {
+    "qwen": "tts_qwen.py",
+    "xunfei": "tts_xunfei.py",
+    "aliyun": "tts_aliyun.py",
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -40,7 +49,8 @@ def parse_args():
     parser.add_argument("--silent-padding", type=float, default=None,
                         help="每页前后静音时长秒 (默认 config 的 video.silent_padding / 0.5)")
     parser.add_argument("--format", dest="fmt", default=None,
-                        help="音频扩展名 (默认 config 的 voice.format / wav)")
+                        help="音频扩展名 (默认 config 的 voice.format / wav); "
+                             "缺少音频时也作为配音输出格式传给引擎")
     parser.add_argument("--density", type=int, default=None, help="PDF 转图像 DPI (默认 300)")
     return parser.parse_args()
 
@@ -77,9 +87,48 @@ def build_options(args):
         "silent_padding": args.silent_padding if args.silent_padding is not None
                           else video.get("silent_padding", 0.5),
         "fmt": args.fmt or (data.get("voice") or {}).get("format") or "wav",
+        "engine": (data.get("voice") or {}).get("engine") or "xunfei",
+        "trans": data.get("trans"),
         "density": args.density or 300,
         "slides": load_slides(data),
     }
+
+
+def audio_path(opts, page):
+    return os.path.join(opts["audio_dir"], f"{page}.{opts['fmt']}")
+
+
+def find_missing_audio(opts):
+    """返回缺少音频文件的页码列表"""
+    return [int(s["page"]) for s in opts["slides"]
+            if not os.path.exists(audio_path(opts, int(s["page"])))]
+
+
+def generate_audio(opts, args, pages):
+    """缺少音频时调用 config 的 voice.engine 指定的配音脚本生成这些页"""
+    engine = str(opts["engine"]).lower()
+    name = TTS_SCRIPTS.get(engine)
+    if not name:
+        print(f"错误: 未知的配音引擎 '{opts['engine']}', 可选: {', '.join(TTS_SCRIPTS)}")
+        sys.exit(1)
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+    if not os.path.exists(script):
+        print(f"错误: 找不到配音脚本 '{script}'")
+        sys.exit(1)
+    if not os.path.exists(args.config):
+        print(f"错误: 自动配音需要配置文件 '{args.config}' (其中包含 {engine} 引擎参数)")
+        sys.exit(1)
+
+    page_spec = ",".join(str(p) for p in sorted(pages))
+    cmd = [sys.executable, script, "--config", args.config,
+           "--audio-dir", opts["audio_dir"], "--format", opts["fmt"],
+           "--pages", page_spec]
+    if opts.get("trans"):
+        cmd += ["--trans", opts["trans"]]
+    print(f"缺少第 {page_spec} 页音频, 调用 {engine} 引擎生成 (格式 {opts['fmt']}) ...")
+    if subprocess.run(cmd).returncode != 0:
+        print(f"错误: {engine} 引擎生成音频失败")
+        sys.exit(1)
 
 
 def main():
@@ -99,10 +148,20 @@ def main():
     os.makedirs(TEMP_DIR, exist_ok=True)
     temp_videos = []
 
+    missing = find_missing_audio(opts)
+    if missing:
+        generate_audio(opts, args, missing)
+        missing = [p for p in missing if not os.path.exists(audio_path(opts, p))]
+        if missing:
+            pages = ",".join(str(p) for p in missing)
+            print(f"错误: {opts['engine']} 引擎未生成第 {pages} 页音频, "
+                  f"请检查 '{opts['audio_dir']}' 下的 *.{opts['fmt']} 文件")
+            sys.exit(1)
+
     for slide in opts["slides"]:
         page = int(slide["page"])
         text = slide.get("text", "")
-        audio_file = os.path.join(opts["audio_dir"], f"{page}.{opts['fmt']}")
+        audio_file = audio_path(opts, page)
         if not os.path.exists(audio_file):
             print(f"错误: 缺少第 {page} 页音频 '{audio_file}'")
             sys.exit(1)
