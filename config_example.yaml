@@ -1,0 +1,25 @@
+# 讲稿文本文件 (内含 slides: page/text), 也可用 pdf2mov.py --trans 指定
+trans: trans.yaml
+
+# 音频目录 (TTS 脚本输出; pdf2mov.py 默认从这里读取音频)
+# pdf2mov.py 可用 --audio-dir 覆盖
+audio_dir: audio
+
+# PDF 文件 (pdf2mov.py 用, 可用 --pdf 覆盖)
+pdf: input.pdf
+
+# 视频设置
+video:
+  resolution: (1280, 720)
+  fps: 24
+  output: output.mp4
+  silent_padding: 0.5
+
+voice:
+  engine: xunfei
+  format: wav
+
+xunfei:
+  appid:
+  apisec:
+  apikey:

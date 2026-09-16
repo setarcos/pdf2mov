@@ -8,12 +8,59 @@
 
 ## 使用方法
 
- 1. 将 PDF 讲稿放到当前目录
- 1. 修改 `config.yaml` 文件，设置文件输入输出目录
- 1. 完善每一页的文字讲稿
+ 1. 将 PDF 文件放到当前目录
+ 1. 编辑讲稿文件 `trans.yaml`，逐页填写该页的朗读文本
+ 3. 修改 `config.yaml`，设置 `trans`（讲稿文件）、`audio_dir`（音频目录）、`pdf`（PDF 文件）及视频参数
  1. 设置讯飞 APPID 等信息（或改用本地 Qwen 引擎, 见下）
  1. 执行 `tts_xunfei.py` 生成讲稿音频（或 `tts_qwen.py` 本地 Qwen3-TTS）
  1. 执行 `pdf2mov.py` 将 PDF 页面和音频整合为视频
+
+## 讲稿文件 (`trans`)
+
+逐页讲稿与其它设置分开存放在 YAML 文件中，由 `config.yaml` 的 `trans` 指定
+（默认 `trans.yaml`）。`page` 为 PDF 页码（从 1 开始），`text` 为该页朗读文本：
+
+```yaml
+slides:
+  - page: 1
+    text: "你好"
+  - page: 2
+    text: "再见"
+```
+
+## config.yaml
+
+```yaml
+trans: trans.yaml   # 讲稿文件（可用 pdf2mov.py --trans 覆盖）
+audio_dir: audio    # 音频目录，也是 pdf2mov.py 默认的音频输入目录
+pdf: input.pdf      # PDF 文件（可用 pdf2mov.py --pdf 覆盖）
+
+video:
+  resolution: (1280, 720)
+  fps: 24
+  output: output.mp4
+  silent_padding: 0.5
+voice:
+  engine: xunfei
+  format: wav       # 音频扩展名，需与 TTS 输出一致
+```
+
+## pdf2mov.py 命令行
+
+所有参数都可在命令行指定，不依赖 `config.yaml` 也能一次完成转换：
+
+```bash
+# 全部参数由命令行给出
+python pdf2mov.py --pdf input.pdf --trans trans.yaml --audio-dir audio -o output.mp4
+
+# 只覆盖部分参数，其余读取 config.yaml
+python pdf2mov.py -o output.mp4
+```
+
+常用参数：`--pdf`（PDF 文件）、`--audio-dir`（音频输入目录，默认取 `audio_dir`）、
+`-o/--output`（输出视频文件名）、`--trans`（讲稿文件）、`--fps`、`--silent-padding`、
+`--format`（音频扩展名）、`--density`（PDF 转图像 DPI，默认 300）。
+未提供讲稿时，会按音频目录中的数字文件名自动推断页码顺序。
 
 ## 本地 Qwen 配音 (tts_qwen.py)
 

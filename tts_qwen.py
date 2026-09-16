@@ -2,7 +2,7 @@
 # coding=utf-8
 """PDF2MOV 讲稿配音工具 —— 本地 Qwen3-TTS 引擎 (与 tts_xunfei.py / tts_aliyun.py 并列)
 
-读取 config.yaml 中每个 slide 的 text, 逐页用本地 Qwen3-TTS 模型合成讲稿音频,
+读取 config.yaml 中 trans 指向的讲稿文件里的每页 text, 逐页用本地 Qwen3-TTS 模型合成讲稿音频,
 输出到 audio_dir/{page}.{format}, 供 pdf2mov.py 合并为视频。
 
 两种模式 (传 --ref-wav 自动切换):
@@ -340,7 +340,8 @@ def main():
     parser.add_argument("--config", default="config.yaml", help="配置文件路径 (默认 config.yaml)")
     parser.add_argument("--pages", default=None,
                         help="只合成指定页, 如 '1,3,5-9' (默认全部)")
-    parser.add_argument("--audio-dir", default=None, help="音频输出目录 (默认取 config 的 audio_dir)")
+    parser.add_argument("--audio-dir", default=None,
+                        help="音频输出目录 (默认取 config 的 audio_dir)")
     parser.add_argument("--format", default=None, help="输出扩展名 (默认取 config 的 voice.format / wav)")
     parser.add_argument("--skip-existing", action="store_true", help="跳过已存在的输出文件")
     # 模型/合成
@@ -372,15 +373,14 @@ def main():
         sys.exit(1)
 
     try:
-        import yaml
-        with open(args.config, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
+        from common import load_config
+        config = load_config(args.config)
     except Exception as e:
         log(f"错误: 读取配置失败 - {e}")
         sys.exit(1)
 
     if not config or "slides" not in config:
-        log(f"错误: 配置缺少 slides 段: {args.config}")
+        log(f"错误: 配置缺少讲稿 (trans 指向的 slides 段): {args.config}")
         sys.exit(1)
 
     run(config, args)

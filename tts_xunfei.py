@@ -1,7 +1,6 @@
 import os
 import ssl
 import json
-import yaml
 import base64
 import wave
 import websocket
@@ -11,6 +10,8 @@ import hashlib
 import hmac
 from wsgiref.handlers import format_date_time
 from urllib.parse import urlencode
+
+from common import load_config
 
 
 class Ws_Param:
@@ -61,6 +62,7 @@ class WebSocketClient:
 
     def save_pcm_to_wav(self, pcm_data, filename):
         """Convert PCM data to WAV format."""
+        os.makedirs(self.audio_dir, exist_ok=True)
         wav_filename = f"{self.audio_dir}/{filename}.wav"
         with wave.open(wav_filename, 'wb') as wav_file:
             wav_file.setnchannels(1)  # Mono audio
@@ -129,8 +131,7 @@ class WebSocketClient:
 
 
 if __name__ == "__main__":
-    with open('config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
+    config = load_config()
 
     client = WebSocketClient(config)
     client.run()  # Runs WebSocket sequentially for each slide
