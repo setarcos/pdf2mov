@@ -19,12 +19,6 @@ voice:
   engine: xunfei
   format: wav
 
-# 自定义词典: 讲稿发送给 TTS 前替换其中的词, 用于控制发音
-# (区分大小写, 长词优先; 只影响合成, 不影响讲稿原文)
-dictionary:
-  UNO: woono
-  INO: "I N O"
-
 # engine: qwen 时, 模型路径等参数写在这里 (见 README)
 qwen:
   model_custom:

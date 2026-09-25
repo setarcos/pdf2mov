@@ -1,9 +1,12 @@
 # coding=utf-8
 """config.yaml 与讲稿文件 (trans) 的加载工具。
 
-config.yaml 不再保存逐页讲稿, 只保存 trans 指向的讲稿 YAML 文件路径和
-audio_dir 音频目录等设置; 讲稿文件沿用 slides 结构:
+config.yaml 不再保存逐页讲稿和自定义词典, 只保存 trans 指向的讲稿 YAML 文件路径和
+audio_dir 音频目录等设置; 讲稿文件沿用 slides 结构, 自定义词典 (dictionary) 也写在
+讲稿文件里:
 
+    dictionary:
+      UNO: woono
     slides:
       - page: 1
         text: "你好"
@@ -21,7 +24,7 @@ def load_config(path=DEFAULT_CONFIG, data=None, trans=None):
 
     - data 非 None 时直接使用该 dict (不再读取 path), 但 trans 仍按 path 所在目录解析
     - trans 参数非 None 时覆盖配置中的讲稿路径 (优先于 data 里已有的 slides)
-    - trans 指向的讲稿 YAML 合并为 data['slides']
+    - trans 指向的讲稿 YAML 合并为 data['slides'], 其 dictionary 段合并为 data['dictionary']
     - audio_dir 为音频目录, 缺省为 audio
     """
     base_dir = os.path.dirname(os.path.abspath(path)) if path else os.getcwd()
@@ -41,9 +44,12 @@ def load_config(path=DEFAULT_CONFIG, data=None, trans=None):
         if not os.path.isabs(trans_path):
             trans_path = os.path.join(base_dir, trans_path)
         with open(trans_path, "r", encoding="utf-8") as f:
-            slides = yaml.safe_load(f) or {}
-        if isinstance(slides, dict):
-            slides = slides.get("slides", [])
+            doc = yaml.safe_load(f) or {}
+        if isinstance(doc, dict):
+            data["dictionary"] = doc.get("dictionary") or {}
+            slides = doc.get("slides", [])
+        else:
+            slides = doc
         data["slides"] = slides
         data["trans"] = trans_path
 
@@ -59,13 +65,16 @@ def load_slides(config):
 
 
 def load_dictionary(config):
-    """读取 config 的 dictionary: 段, 返回 {原词: 替换词}
+    """读取讲稿文件里的 dictionary 段, 返回 {原词: 替换词}
 
-    用于控制 TTS 发音: 合成前把讲稿中的原词换成读音更准确的写法, 例如
+    用于控制 TTS 发音: 合成前把讲稿中的原词换成读音更准确的写法, 例如讲稿文件里写
 
         dictionary:
           UNO: woono
           INO: "I N O"
+        slides:
+          - page: 1
+            text: "UNO 的程序…"
     """
     raw = config.get("dictionary") or {}
     if not isinstance(raw, dict):
