@@ -90,6 +90,24 @@ python tts_qwen.py --config config.yaml --trans trans/trans.yaml \
 引擎执行失败、或未输出对应文件时，`pdf2mov.py` 会报错退出并提示缺失页，此时可先手动
 运行上面的脚本排查。`voice.format` 必须与引擎输出一致，否则会提示“未生成第 N 页音频”。
 
+## 查找讲稿中的词 (find_text.py)
+
+查找讲稿里哪些页出现了某个词，可选用 `--delete` 删掉这些页的音频（删后重新运行
+`pdf2mov.py` 会按讲稿重新合成这几页）：
+
+```bash
+# 列出含 UNO 的页
+python find_text.py UNO
+
+# 同时删除这些页的音频 (audio_dir/{page}.{format})
+python find_text.py UNO --delete
+
+# 忽略大小写；讲稿/音频目录也可用命令行覆盖
+python find_text.py uno -i --trans trans.yaml --audio-dir audio --format wav
+```
+
+按字面匹配（区分大小写），只需包含该词即命中（`UNO` 会命中 `UNOs`）。
+
 ## pdf2mov.py 命令行
 
 所有参数都可在命令行指定，不依赖 `config.yaml` 也能一次完成转换：
