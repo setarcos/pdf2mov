@@ -51,7 +51,7 @@ import re
 import sys
 import time
 
-from common import parse_pages
+from common import apply_dictionary, load_dictionary, parse_pages
 
 
 # 模型路径 按以下顺序解析:
@@ -218,6 +218,7 @@ def run(config, args):
     device = pick(args.device, "device", "cuda:0")
     max_new_tokens = pick(args.max_new_tokens, "max_new_tokens", None)
     max_text_chars = int(pick(args.max_text_chars, "max_text_chars", 500) or 0)
+    dictionary = load_dictionary(config)
     audio_dir = args.audio_dir or config.get("audio_dir", "audio")
     fmt = args.format or (config.get("voice") or {}).get("format", "wav")
 
@@ -247,7 +248,8 @@ def run(config, args):
     jobs = []
     skipped = []
     for slide in slides:
-        page, text = slide["page"], str(slide.get("text", "")).strip()
+        page = slide["page"]
+        text = apply_dictionary(str(slide.get("text", "")).strip(), dictionary)
         out_path = os.path.join(audio_dir, f"{page}.{fmt}")
         if not text:
             skipped.append((page, "无文本"))
@@ -268,6 +270,8 @@ def run(config, args):
     else:
         log(f"音色: {speaker} | 指令: {instruct}")
     log(f"语言: {language} | 输出目录: {audio_dir} | 格式: {fmt}")
+    if dictionary:
+        log(f"自定义词典: {len(dictionary)} 条替换规则")
     log(f"待合成页数: {len(jobs)} / 总页数: {len(slides)}")
     if skipped:
         for page, why in skipped:

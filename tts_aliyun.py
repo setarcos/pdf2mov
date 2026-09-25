@@ -7,7 +7,7 @@ import sys
 import dashscope
 from dashscope.audio.tts_v2 import *
 
-from common import load_config, parse_pages
+from common import apply_dictionary, load_config, load_dictionary, parse_pages
 
 # 若没有将API Key配置到环境变量中，需将apiKey替换为自己的API Key
 # dashscope.api_key = "apiKey"
@@ -41,13 +41,14 @@ def main():
     config = load_config(args.config, trans=args.trans)
     audio_dir = args.audio_dir or config['audio_dir']
     pages = parse_pages(args.pages)
+    dictionary = load_dictionary(config)
 
     os.makedirs(audio_dir, exist_ok=True)
     for slide in config['slides']:
         if pages is not None and int(slide['page']) not in pages:
             continue
         synthesizer = SpeechSynthesizer(model=model, voice=voice)
-        audio = synthesizer.call(slide['text'])
+        audio = synthesizer.call(apply_dictionary(slide['text'], dictionary))
         print('requestId: ', synthesizer.get_last_request_id())
         with open(f"{audio_dir}/{slide['page']}.mp3", 'wb') as f:
             f.write(audio)

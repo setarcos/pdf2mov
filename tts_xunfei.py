@@ -13,7 +13,7 @@ import hmac
 from wsgiref.handlers import format_date_time
 from urllib.parse import urlencode
 
-from common import load_config, parse_pages
+from common import apply_dictionary, load_config, load_dictionary, parse_pages
 
 
 class Ws_Param:
@@ -48,6 +48,7 @@ class WebSocketClient:
     def __init__(self, config):
         self.slides = config['slides']
         self.audio_dir = config['audio_dir']
+        self.dictionary = load_dictionary(config)
         self.wsParam = Ws_Param(
             APPID=config['xunfei']['appid'],
             APISecret=config['xunfei']['apisec'],
@@ -112,8 +113,9 @@ class WebSocketClient:
 
         def on_open(ws):
             """Sends the text when connection is opened."""
-            print(f"Sending: {slide['text']}")
-            ws.send(self.create_message(slide['text']))
+            text = apply_dictionary(slide['text'], self.dictionary)
+            print(f"Sending: {text}")
+            ws.send(self.create_message(text))
 
         # Create a new WebSocket connection for this message
         ws_url = self.wsParam.create_url()

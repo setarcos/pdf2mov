@@ -43,7 +43,27 @@ video:
 voice:
   engine: xunfei
   format: wav       # 音频扩展名，需与 TTS 输出一致
+
+dictionary:         # 自定义词典（可选，见下）
+  UNO: woono
 ```
+
+## 自定义词典（控制发音）
+
+TTS 常把缩写、专有名词读错。可在 `config.yaml` 的 `dictionary` 段自定义替换规则，
+讲稿发送给 TTS 引擎之前会先按词典替换，从而控制发音。例如讲稿里写 `UNO`，
+合成时按 `woono` 发音：
+
+```yaml
+dictionary:
+  UNO: woono
+  INO: "I N O"
+```
+
+- 对所有引擎（`qwen` / `xunfei` / `aliyun`）都生效；
+- 区分大小写，按原词的**字面**匹配；
+- 多个词条按**长词优先**依次替换，避免短词先命中长词的一部分；
+- 只影响合成，讲稿文件（`trans`）内容不变（字幕等仍显示原文）。
 
 ## 音频缺失时自动配音
 

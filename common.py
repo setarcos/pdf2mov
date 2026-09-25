@@ -9,6 +9,7 @@ audio_dir 音频目录等设置; 讲稿文件沿用 slides 结构:
         text: "你好"
 """
 import os
+import re
 
 import yaml
 
@@ -55,6 +56,30 @@ def load_slides(config):
     """返回按页码排序的讲稿列表, 无讲稿时返回 []"""
     slides = config.get("slides") or []
     return sorted(slides, key=lambda s: int(s.get("page", 0)))
+
+
+def load_dictionary(config):
+    """读取 config 的 dictionary: 段, 返回 {原词: 替换词}
+
+    用于控制 TTS 发音: 合成前把讲稿中的原词换成读音更准确的写法, 例如
+
+        dictionary:
+          UNO: woono
+          INO: "I N O"
+    """
+    raw = config.get("dictionary") or {}
+    if not isinstance(raw, dict):
+        return {}
+    return {str(k): "" if v is None else str(v) for k, v in raw.items()}
+
+
+def apply_dictionary(text, dictionary):
+    """按自定义词典替换文本 (区分大小写, 长词优先, 单次扫描不级联), 词典为空时原样返回"""
+    if not dictionary:
+        return text
+    keys = sorted(dictionary, key=len, reverse=True)
+    pattern = re.compile("|".join(re.escape(k) for k in keys))
+    return pattern.sub(lambda m: dictionary[m.group(0)], text)
 
 
 def parse_pages(spec):
